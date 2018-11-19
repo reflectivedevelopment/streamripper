@@ -27,17 +27,17 @@ pkg-deb: dist
 	rm -r $(DEBTMP_DIR);
 
 # Create an RPM package
-pkg-rpm: pkg-src
-        mkdir -p $(HOME)/.rpm/RPMS/i386
-        mkdir -p $(HOME)/.rpm/SRPMS
-        mkdir -p $(HOME)/.rpm/BUILD
-        mkdir -p $(HOME)/.rpm/SOURCES
-        mkdir -p $(HOME)/.rpm/tmp
-        - rm -r $(HOME)/.rpm/BUILD/$(APP_NAME)-root
-        - rm -r $(HOME)/.rpm/RPMS/$(APP_NAME)-*
-        - rm -r $(HOME)/.rpm/SRPMS/$(APP_NAME)-*
-        - rm -r $(HOME)/.rpm/SOURCES/$(APP_NAME)-*
-        cp pkg/$(PACKAGE)-$(VERSION).tar.gz $(HOME)/.rpm/SOURCES/
-        rpmbuild --quiet --nodeps --define="_topdir $(HOME)/.rpm" \
-            -ba install/rpm/$(PACKAGE).spec
-        mv $(HOME)/.rpm/RPMS/x86_64/$(APP_NAME)-$(VERSION)-*.x86_64.rpm pkg/
+pkg-rpm: dist
+	mkdir -p $(HOME)/.rpm/RPMS/i386
+	mkdir -p $(HOME)/.rpm/SRPMS
+	mkdir -p $(HOME)/.rpm/BUILD
+	mkdir -p $(HOME)/.rpm/SOURCES
+	mkdir -p $(HOME)/.rpm/tmp
+	- rm -r $(HOME)/.rpm/BUILD/$(PACKAGE)-root
+	- rm -r $(HOME)/.rpm/RPMS/$(PACKAGE)-*
+	- rm -r $(HOME)/.rpm/SRPMS/$(PACKAGE)-*
+	- rm -r $(HOME)/.rpm/SOURCES/$(PACKAGE)-*
+	cp $(PACKAGE)-$(VERSION).tar.gz $(HOME)/.rpm/SOURCES/
+	rpmbuild --quiet --nodeps --define="_topdir $(HOME)/.rpm" \
+	    -ba $(srcdir)/install/rpm/$(PACKAGE).spec
+	mv $(HOME)/.rpm/RPMS/x86_64/$(PACKAGE)-$(VERSION)-*.x86_64.rpm ./

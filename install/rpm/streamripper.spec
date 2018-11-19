@@ -1,3 +1,5 @@
+%define debug_package %{nil}
+
 Summary: Streamripper uses multi-threading to increase the network throughput of a TCP stream with encryption.
 Name: streamripper
 Provides: streamripper
@@ -5,12 +7,12 @@ Version: 2.0
 Release: 1
 License: MIT
 Source0: %{name}-%{version}.tar.gz
-URL: 
+#URL: 
 Vendor: Kim Ebert <kim@developmint.work>
 Packager: Kim Ebert <kim@developmint.work>
 BuildArch: x86_64
 BuildRoot: %{_builddir}/%{name}-root
-Requires: 
+#Requires: 
 BuildRequires: golang
 
 %description
@@ -30,10 +32,4 @@ make DESTDIR=%{buildroot} install
 rm -rf %{buildroot}
 
 %files
-/usr/bin/streamripper
-/usr/share/doc/streamripper/AUTHORS
-/usr/share/doc/streamripper/COPYING
-/usr/share/doc/streamripper/INSTALL
-/usr/share/doc/streamripper/NEWS
-/usr/share/doc/streamripper/README
-/usr/share/doc/streamripper/TODO
+/usr/local/bin/streamripper
