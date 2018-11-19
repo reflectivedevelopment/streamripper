@@ -1,0 +1,10 @@
+Source: streamripper
+Section: net
+Priority: optional
+Maintainer: Kim Ebert <kim@developmint.work>
+Build-Depends: debhelper (>= 4.0.0), autotools-dev, golang
+
+Package: streamripper
+Architecture: any
+Depends: 
+Description: Streamripper uses multi-threading to increase the network throughput of a TCP stream with compression.
