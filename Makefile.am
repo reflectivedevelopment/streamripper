@@ -1,7 +1,7 @@
 
 bin_PROGRAMS = streamripper
-streamripper_SOURCES = streamripper.go
-streamripper: streamripper.go
+streamripper_SOURCES = ./src/streamripper.go
+streamripper: ./src/streamripper.go
 	go build -o $@ $<
 
 
