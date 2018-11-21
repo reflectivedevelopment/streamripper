@@ -1,8 +1,8 @@
 
 bin_PROGRAMS = streamripper
-streamripper_SOURCES = ./src/streamripper.go ./src/ripper/pool.go
+streamripper_SOURCES = ./src/streamripper.go ./src/ripper/pool.go ./src/ripper/server.go
 
-streamripper$(EXEECT): ./src/streamripper.go ./src/ripper/pool.go
+streamripper$(EXEECT): ./src/streamripper.go ./src/ripper/pool.go ./src/ripper/server.go
 	export GOPATH="$(abs_srcdir)"; go build -o $@ $<
 
 pool_test_SOURCES = ./test/ripper/pool_test.go ./src/ripper/pool.go

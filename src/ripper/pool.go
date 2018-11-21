@@ -1,16 +1,13 @@
 package ripper
 
 
-import "log"
-
-
 type RawBlock struct {
-	Len int32
+	Len uint32
 	Data []byte
 }
 
 type SplitBlock struct {
-	Id int32
+	Id uint32
 	Block RawBlock
 }
 
@@ -25,7 +22,7 @@ type Joiner struct {
 }
 
 func (s Splitter) RunSplitter() {
-	var i int32 = 0
+	var i uint32 = 0
 
 	for {
 		rb, more := <- s.BlocksIn
@@ -40,8 +37,8 @@ func (s Splitter) RunSplitter() {
 }
 
 func (j Joiner) RunJoiner() {
-	var i int32 = 0
-	var m map[int32]RawBlock = make(map[int32]RawBlock)
+	var i uint32 = 0
+	var m map[uint32]RawBlock = make(map[uint32]RawBlock)
 	for {
 		sb, more := <- j.BlocksIn
 		// This may leave some items in the map, but this is fine as the incoming connection
