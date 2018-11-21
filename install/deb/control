@@ -2,6 +2,7 @@ Source: streamripper
 Section: net
 Priority: optional
 Maintainer: Kim Ebert <kim@developmint.work>
+
 Build-Depends: debhelper (>= 4.0.0), autotools-dev, golang
 Package: streamripper
 Architecture: any
