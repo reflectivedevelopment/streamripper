@@ -1,9 +1,18 @@
 
 bin_PROGRAMS = streamripper
-streamripper_SOURCES = ./src/streamripper.go
-streamripper: ./src/streamripper.go
-	go build -o $@ $<
+streamripper_SOURCES = ./src/streamripper.go ./src/ripper/pool.go
 
+streamripper$(EXEECT): ./src/streamripper.go ./src/ripper/pool.go
+	export GOPATH="$(abs_srcdir)"; go build -o $@ $<
+
+pool_test_SOURCES = ./test/ripper/pool_test.go ./src/ripper/pool.go
+
+pool_test$(EXEECT): ./test/ripper/pool_test.go ./src/ripper/pool.go
+	export GOPATH="$(abs_srcdir)"; go test -o $@ $<
+
+TESTS = pool_test
+
+EXTRA_DIST = $(srcdir)/test
 
 DEBTMP_DIR = deb_build
 # Create a deb package

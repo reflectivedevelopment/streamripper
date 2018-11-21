@@ -10,6 +10,7 @@ import "log"
 //import "net"
 import "time"
 
+import "ripper"
 /*
 func worker(id int, jobs <-chan int, results chan<- int) {
 	for j := range jobs {
@@ -145,5 +146,7 @@ func main() {
 	if *runClient {
 		client(certPath, keyPath, hostName, port)
 	}
+
+	ripper.Test()
 }
 

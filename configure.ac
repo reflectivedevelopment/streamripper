@@ -8,7 +8,6 @@ AM_INIT_AUTOMAKE
 
 # Probably want to add some tests for Go here...
 # We could use gccgo, but we will use golang for now
-
 # For gccgo 
 # See https://lists.gnu.org/archive/html/bug-autoconf/2013-01/msg00006.html
 #AC_PROG_GO
