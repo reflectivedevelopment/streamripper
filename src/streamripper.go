@@ -146,7 +146,5 @@ func main() {
 	if *runClient {
 		client(certPath, keyPath, hostName, port)
 	}
-
-	ripper.Test()
 }
 
