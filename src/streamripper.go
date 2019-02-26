@@ -9,7 +9,8 @@ import "flag"
 import "io/ioutil"
 import rnd "math/rand"
 import "log"
-//import "net"
+import "net"
+import "sync"
 import "time"
 
 //import "ripper"
@@ -31,8 +32,43 @@ type RipperConfig struct {
 }
 
 
-func handleServerConnection() {
+type ConnectionData struct {
+	active bool
+	connectionId uint64
+	inbound bool
+	outbound bool
+	wgInbound sync.WaitGroup
+	wgOutbound sync.WaitGroup
+}
 
+var ConnectionList map[uint64]ConnectionData;
+
+func handleServerConnection(conn net.Conn, config RipperConfig) {
+	var connectionId uint64
+	var err = binary.Read(conn, binary.LittleEndian, &connectionId)
+	if err != nil {
+		log.Println(err)
+		conn.Close()
+		return
+	}
+	log.Printf("ConnectionId %v connected.", connectionId)
+
+	var connData ConnectionData;
+
+	connData, ok := ConnectionList[connectionId];
+
+	if ok == false {
+		connData.active = true;
+		connData.connectionId = connectionId;
+		connData.inbound = true;
+		connData.wgInbound.Add(1);
+		
+
+	}
+
+	time.Sleep(time.Second)
+	log.Printf("Connection from %v closed.", conn.RemoteAddr())
+	conn.Close()
 }
 
 func server(config RipperConfig) {
@@ -77,18 +113,7 @@ func server(config RipperConfig) {
 			continue
 		}
 
-		var connectionId uint64
-		err = binary.Read(conn, binary.LittleEndian, &connectionId)
-		if err != nil {
-			log.Println(err)
-			conn.Close()
-			continue
-		}
-		log.Printf("ConnectionId %v connected.", connectionId)
-
-		time.Sleep(time.Second)
-		log.Printf("Connection from %v closed.", conn.RemoteAddr())
-		conn.Close()
+		go handleServerConnection(conn, config);
 	}
 }
 
@@ -127,10 +152,14 @@ func client(config RipperConfig) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	
 }
 
 func main() {
 	rnd.Seed(time.Now().UTC().UnixNano())
+
+	ConnectionList = make(map[uint64]ConnectionData);
 
 	var config RipperConfig
 

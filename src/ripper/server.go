@@ -3,9 +3,11 @@ package ripper
 import "io"
 import "encoding/binary"
 import "net"
+import "os"
+import "sync"
 
-
-func ReadSocketSplitBlock(connId uint64, conn net.Conn, out chan SplitBlock) {
+func ReadSocketSplitBlock(connId uint64, wg *sync.WaitGroup, conn net.Conn, out chan SplitBlock) {
+	defer wg.Done()
 	defer conn.Close()
 
 	for {
@@ -35,7 +37,8 @@ func ReadSocketSplitBlock(connId uint64, conn net.Conn, out chan SplitBlock) {
 	}
 }
 
-func ReadSocketRawBlock(connId uint64, conn net.Conn, out chan RawBlock, bufsize uint32) {
+func ReadSocketRawBlock(connId uint64, wg *sync.WaitGroup, conn net.Conn, out chan RawBlock, bufsize uint32) {
+	defer wg.Done()
 	defer conn.Close()
 
 	for {
@@ -51,7 +54,8 @@ func ReadSocketRawBlock(connId uint64, conn net.Conn, out chan RawBlock, bufsize
 	}
 }
 
-func WriteSocketSplitBlock(connId uint64, conn net.Conn, in chan SplitBlock) {
+func WriteSocketSplitBlock(connId uint64, wg *sync.WaitGroup, conn net.Conn, in chan SplitBlock) {
+	defer wg.Done()
 	defer conn.Close()
 
 	for {
@@ -81,7 +85,8 @@ func WriteSocketSplitBlock(connId uint64, conn net.Conn, in chan SplitBlock) {
 	}
 }
 
-func WriteSocketRawBlock(connId uint64, conn net.Conn, in chan RawBlock) {
+func WriteSocketRawBlock(connId uint64, wg *sync.WaitGroup, conn net.Conn, in chan RawBlock) {
+	defer wg.Done()
 	defer conn.Close()
 
 	for {
@@ -108,13 +113,20 @@ func WriteSocketRawBlock(connId uint64, conn net.Conn, in chan RawBlock) {
 /*
 Reads in chan. Closes out chan when complete. 
 */
-func RawBlockToStdOut(connId uint64, in chan RawBlock, out chan RawBlock) {
+func RawBlockToStdOut(connId uint64, wg *sync.WaitGroup, in chan RawBlock, out chan RawBlock) {
+	defer wg.Done()
+	defer os.Stdout.Close()
+	defer close(out)
 
+	// TODO
 }
 
 /*
 Write out chan. Ignores in chan. 
 */
-func StdInToRawBlock(connId uint64, in chan RawBlock, out chan RawBlock) {
+func StdInToRawBlock(connId uint64, wg *sync.WaitGroup, in chan RawBlock, out chan RawBlock) {
+	defer wg.Done()
+	defer os.Stdin.Close()
 
+	// TODO
 }
