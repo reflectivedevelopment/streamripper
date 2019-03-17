@@ -14,21 +14,18 @@ func ReadSocketSplitBlock(connId uint64, wg *sync.WaitGroup, conn net.Conn, out 
 		var id uint32
 		err := binary.Read(conn, binary.LittleEndian, &id)
 		if err != nil {
-			close(out)
 			break;
 		}
 
 		var l uint32
 		err = binary.Read(conn, binary.LittleEndian, &l)
 		if err != nil {
-			close(out)
 			break;
 		}
 
 		buf := make([]byte, l)
 		_, err = io.ReadFull(conn, buf)
 		if err != nil {
-			close(out)
 			break;
 		}
 		r := SplitBlock{ id, RawBlock{ l, buf } }
@@ -96,13 +93,7 @@ func WriteSocketRawBlock(connId uint64, wg *sync.WaitGroup, conn net.Conn, in ch
 			break
 		}
 
-		err := binary.Write(conn, binary.LittleEndian, &data.Len)
-		if err != nil {
-			close(in)
-			break;
-		}
-
-		_, err = conn.Write(data.Data)
+		_, err := conn.Write(data.Data)
 		if err != nil {
 			close(in)
 			break;
@@ -113,20 +104,41 @@ func WriteSocketRawBlock(connId uint64, wg *sync.WaitGroup, conn net.Conn, in ch
 /*
 Reads in chan. Closes out chan when complete. 
 */
-func RawBlockToStdOut(connId uint64, wg *sync.WaitGroup, in chan RawBlock, out chan RawBlock) {
+func RawBlockToStdOut(connId uint64, wg *sync.WaitGroup, in chan RawBlock) {
 	defer wg.Done()
 	defer os.Stdout.Close()
-	defer close(out)
+	defer close(in)
 
-	// TODO
+	for {
+		data, ok := <- in;
+
+		if !ok {
+			break
+		}
+
+		_, err := os.Stdout.Write(data.Data)
+		if err != nil {
+			close(in)
+			break;
+		}		
+	}
 }
 
 /*
 Write out chan. Ignores in chan. 
 */
-func StdInToRawBlock(connId uint64, wg *sync.WaitGroup, in chan RawBlock, out chan RawBlock) {
+func StdInToRawBlock(connId uint64, wg *sync.WaitGroup, out chan RawBlock, bufsize uint32) {
 	defer wg.Done()
-	defer os.Stdin.Close()
+	defer close(out)
 
-	// TODO
+	for {
+		buf := make([]byte, bufsize)
+		l, err := os.Stdin.Read(buf)
+		if err != nil {
+			break;
+		}
+		r := RawBlock{ uint32(l), buf }
+
+		out <- r
+	}
 }

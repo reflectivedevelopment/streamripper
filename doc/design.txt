@@ -1,0 +1,70 @@
+
+StreamRipper Library -
+
+Okay, so we need to design the library around Go Streams. Multiple Go Streams can be set for the connection streams. We don't care of the connection streams are encrypted or not.
+
+The input / output stream ( the one the client library will use ) is a single stream.
+
+So basicially 
+
+                                              /---\
+Input / Output stream  --- Stream Ripper Lib ------- Stream Ripper ---- Input / Output Stream
+                                              \---/
+
+The stream ripper library doesn't actually specify what the connect between the two stream rippers are, that is up the designer of the code. However, it just needs to provide an input and output stream pair for stream ripper to work with.
+
+TODO should it be a pair. As long as there is a bi-directional line, does it matter?
+
+Perhaps a better approach is to separate stream ripper into a single directional library. Meaning...
+
+Stream ripper only worries about intput ---> Stream Ripper ----> output.
+
+The end user can configure two of these to look like
+
+Input -> Stream Ripper -> Output
+Output <- Stream Ripper <- Input
+
+for bidirectional communication.
+
+That is amazing. We could then have the stream ripper app have the client specify direction when the network connection is made. Or we could have both directions use the same stream! It is left up to the user of the library to decide how to use it.
+
+Going single direction simplifies a lot of stuff though from a library perspective!
+
+The other thing we should keep in mind in our design is leaving the closing of the connections up to the user of the library by returning error codes such as to indicate to the person using the library that the should clean things up to their hearts content.
+
+
+
+Stream/Socket Ripper Design.
+
+Summary:
+
+The stream ripper is like aespipe or stunnel. The difference is that stream ripper enables multiple threads for the encryption at the same time. This allows the encryption to scale beyond a single process.
+
+Details:
+
+Stream/Socket Ripper is broken up into several different processes.
+
+StreamRipper - Receive a stdin stream, encrypt or decrypt stream, write to stdout.
+SocketRipper - Listen for socket, when socket connects, connect to destination SocketRipper, encrypt traffic, send to detination socket, decrypt traffice, send to destination socket. SocketRipper does allow traffic input or output to be stdin or stdout.
+
+
+Traffic for the Ripper applications is to be streamed in a series of blocks, until completion.
+
+
+
+
+Connections Object
+-contains a list of connections identified by connection id, which is a random unsigned 64 bit number
+
+Connection Object
+-contains the state of the connection 
+-contains the queue objects
+-contains a list of the threads?
+
+
+-can we have the last remaining object close the pipe? How do we know that we are the last?
+
+
+
+
+

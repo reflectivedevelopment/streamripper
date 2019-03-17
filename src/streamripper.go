@@ -13,7 +13,7 @@ import "net"
 import "sync"
 import "time"
 
-//import "ripper"
+import "ripper"
 
 type RipperConfig struct {
 	RunServer *bool
@@ -37,11 +37,22 @@ type ConnectionData struct {
 	connectionId uint64
 	inbound bool
 	outbound bool
+	inChan chan ripper.SplitBlock
 	wgInbound sync.WaitGroup
 	wgOutbound sync.WaitGroup
 }
 
-var ConnectionList map[uint64]ConnectionData;
+var ConnectionList map[uint64]*ConnectionData;
+
+func processServerConnection(cData *ConnectionData, config RipperConfig) {
+
+
+	cData.wgInbound.Wait();
+
+	close(cData.inChan); // we don't have anything else to process here.
+
+	delete(ConnectionList, cData.connectionId);
+}
 
 func handleServerConnection(conn net.Conn, config RipperConfig) {
 	var connectionId uint64
@@ -53,22 +64,32 @@ func handleServerConnection(conn net.Conn, config RipperConfig) {
 	}
 	log.Printf("ConnectionId %v connected.", connectionId)
 
-	var connData ConnectionData;
+	var connData *ConnectionData;
 
 	connData, ok := ConnectionList[connectionId];
 
 	if ok == false {
+		connData = &ConnectionData{};
 		connData.active = true;
 		connData.connectionId = connectionId;
 		connData.inbound = true;
+		connData.inChan = make(chan ripper.SplitBlock, 100);
+		ConnectionList[connectionId] = connData;
 		connData.wgInbound.Add(1);
-		
-
+		// Start up our internal processing
+		// We start up after the connection is added so we 
+		// don't prematurely shut things down...
+		go processServerConnection(ConnectionList[connectionId], config);
+	} else {
+		connData.wgInbound.Add(1);
 	}
 
-	time.Sleep(time.Second)
-	log.Printf("Connection from %v closed.", conn.RemoteAddr())
-	conn.Close()
+	go func() {
+		ripper.ReadSocketSplitBlock(connectionId, &connData.wgInbound, conn, connData.inChan);
+		log.Printf("Connection from %v closed.", conn.RemoteAddr())
+		conn.Close()
+	}()
+
 }
 
 func server(config RipperConfig) {
@@ -113,7 +134,10 @@ func server(config RipperConfig) {
 			continue
 		}
 
-		go handleServerConnection(conn, config);
+		// The handle server connection will accept one new connection at a time.
+		// This allows multiple connections to be started at the same time, but allows 
+		// us to handle starting them one at a time.
+		handleServerConnection(conn, config);
 	}
 }
 
@@ -159,7 +183,7 @@ func client(config RipperConfig) {
 func main() {
 	rnd.Seed(time.Now().UTC().UnixNano())
 
-	ConnectionList = make(map[uint64]ConnectionData);
+	ConnectionList = make(map[uint64]*ConnectionData);
 
 	var config RipperConfig
 
