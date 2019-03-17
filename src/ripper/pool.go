@@ -1,5 +1,8 @@
 package ripper
 
+import "encoding/binary"
+import "io"
+import "sync"
 
 type RawBlock struct {
 	Len uint32
@@ -14,14 +17,20 @@ type SplitBlock struct {
 type Splitter struct {
 	BlocksIn chan RawBlock
 	BlocksOut chan SplitBlock
+	Blocksize uint32
+	WaitIn sync.WaitGroup
+	WaitOut sync.WaitGroup
 }
 
 type Joiner struct {
 	BlocksIn chan SplitBlock
 	BlocksOut chan RawBlock
+	Blocksize uint32 
+	WaitIn sync.WaitGroup
+	WaitOut sync.WaitGroup
 }
 
-func (s Splitter) RunSplitter() {
+func (s *Splitter) RunSplitter() {
 	var i uint32 = 0
 
 	for {
@@ -36,7 +45,7 @@ func (s Splitter) RunSplitter() {
 	}
 }
 
-func (j Joiner) RunJoiner() {
+func (j *Joiner) RunJoiner() {
 	var i uint32 = 0
 	var m map[uint32]RawBlock = make(map[uint32]RawBlock)
 	for {
@@ -68,3 +77,107 @@ func (j Joiner) RunJoiner() {
 	}
 }
 
+func (s *Splitter) AddIn(in io.Reader) {
+	s.WaitIn.Add(1)
+
+	go func() {
+		defer s.WaitIn.Done()
+		defer close(s.BlocksIn)
+
+		for {
+			buf := make([]byte, s.Blocksize)
+			l, res := in.Read(buf)
+			if (res != nil) {
+				break;
+			}
+			if (l > 0) {
+				r := RawBlock{ uint32(l), buf[0:l] }
+				s.BlocksIn <- r
+			}
+		}
+	} ()
+}
+
+func (s *Splitter) AddOut(out io.Writer) {
+	s.WaitOut.Add(1)
+
+	go func() {
+		defer s.WaitOut.Done()
+
+		for 
+		{
+			d, ok := <- s.BlocksOut;
+
+			if !ok {
+				break
+			}
+				
+			err := binary.Write(out, binary.LittleEndian, d.Id)
+			if err != nil {
+				break;
+			}
+			err = binary.Write(out, binary.LittleEndian, d.Block.Len)
+			if err != nil {
+				break;
+			}
+			_, err = out.Write(d.Block.Data)
+			if err != nil {
+				break;
+			}
+		}
+	} ()
+}
+
+func (j *Joiner) AddIn(in io.Reader) {
+	j.WaitIn.Add(1)
+
+	go func() {
+		defer j.WaitIn.Done()
+		
+		for {
+			var id uint32
+			err := binary.Read(in, binary.LittleEndian, &id)
+			if err != nil {
+				break;
+			}
+
+			var l uint32
+			err = binary.Read(in, binary.LittleEndian, &l)
+			if err != nil {
+				break;
+			}
+
+			buf := make([]byte, l)
+			_, err = io.ReadFull(in, buf)
+			if err != nil {
+				break;
+			}
+			r := SplitBlock{ id, RawBlock{ l, buf } }
+
+			j.BlocksIn <- r
+		}
+
+	} ()
+}
+
+func (j *Joiner) AddOut(out io.Writer) {
+	j.WaitOut.Add(1)
+
+	go func() {
+		defer j.WaitOut.Done()
+
+		for {
+			data, ok := <- j.BlocksOut;
+
+			if !ok {
+					break
+			}
+
+			_, err := out.Write(data.Data)
+			if err != nil {
+					break;
+			}
+
+		}
+	} ()
+}

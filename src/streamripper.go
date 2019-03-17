@@ -85,7 +85,7 @@ func handleServerConnection(conn net.Conn, config RipperConfig) {
 	}
 
 	go func() {
-		ripper.ReadSocketSplitBlock(connectionId, &connData.wgInbound, conn, connData.inChan);
+//		ripper.ReadSocketSplitBlock(connectionId, &connData.wgInbound, conn, connData.inChan);
 		log.Printf("Connection from %v closed.", conn.RemoteAddr())
 		conn.Close()
 	}()
