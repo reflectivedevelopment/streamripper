@@ -10,6 +10,7 @@ import "io/ioutil"
 import rnd "math/rand"
 import "log"
 import "net"
+import "os"
 import "sync"
 import "time"
 
@@ -36,23 +37,12 @@ type ConnectionData struct {
 	active bool
 	connectionId uint64
 	inbound bool
-	outbound bool
-	inChan chan ripper.SplitBlock
-	wgInbound sync.WaitGroup
-	wgOutbound sync.WaitGroup
+	j ripper.Joiner
+	s ripper.Splitter
+	closeOnce sync.Once 
 }
 
 var ConnectionList map[uint64]*ConnectionData;
-
-func processServerConnection(cData *ConnectionData, config RipperConfig) {
-
-
-	cData.wgInbound.Wait();
-
-	close(cData.inChan); // we don't have anything else to process here.
-
-	delete(ConnectionList, cData.connectionId);
-}
 
 func handleServerConnection(conn net.Conn, config RipperConfig) {
 	var connectionId uint64
@@ -73,23 +63,35 @@ func handleServerConnection(conn net.Conn, config RipperConfig) {
 		connData.active = true;
 		connData.connectionId = connectionId;
 		connData.inbound = true;
-		connData.inChan = make(chan ripper.SplitBlock, 100);
 		ConnectionList[connectionId] = connData;
-		connData.wgInbound.Add(1);
-		// Start up our internal processing
-		// We start up after the connection is added so we 
-		// don't prematurely shut things down...
-		go processServerConnection(ConnectionList[connectionId], config);
-	} else {
-		connData.wgInbound.Add(1);
+	
+		connData.j = ripper.Joiner{}
+		connData.j.Blocksize = uint32(*config.BlockSize)
+		connData.j.BlocksIn = make(chan ripper.SplitBlock, 100)
+		connData.j.BlocksOut = make(chan ripper.RawBlock, 100)
+	
+		go connData.j.RunJoiner()
+
+		connData.j.AddOut(os.Stdout)
+
+		go func() {
+			connData.j.WaitOut.Wait()
+			log.Printf("Finished stdout")
+
+			os.Exit(0)
+		}()
+
 	}
 
 	go func() {
-//		ripper.ReadSocketSplitBlock(connectionId, &connData.wgInbound, conn, connData.inChan);
+		connData.j.AddIn(conn)
+		connData.j.WaitIn.Wait()
+		connData.closeOnce.Do(func() {
+			close(connData.j.BlocksOut)
+		})
 		log.Printf("Connection from %v closed.", conn.RemoteAddr())
 		conn.Close()
 	}()
-
 }
 
 func server(config RipperConfig) {
@@ -141,7 +143,7 @@ func server(config RipperConfig) {
 	}
 }
 
-func client(config RipperConfig) {
+func startClientThread(config RipperConfig, connData *ConnectionData) {
 	certBytes, err := ioutil.ReadFile(*config.CertPath)
 
 	if err != nil {
@@ -168,16 +170,47 @@ func client(config RipperConfig) {
 		log.Fatal(err)
 	}
 
-	defer conn.Close()
+	go func() {
+		defer conn.Close()
 
+		err = binary.Write(conn, binary.LittleEndian, connData.connectionId)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		connData.s.AddOut(conn);
+		connData.s.WaitOut.Wait();
+	}()
+}
+
+func client(config RipperConfig) {
+
+
+	var connData *ConnectionData;
+
+	connData = &ConnectionData{};
+	connData.active = true;
 	var connectionId uint64 = rnd.Uint64()
-	err = binary.Write(conn, binary.LittleEndian, &connectionId)
+	connData.connectionId = connectionId;
+	connData.inbound = false;
 
-	if err != nil {
-		log.Fatal(err)
+	connData.s = ripper.Splitter{}
+	connData.s.Blocksize = uint32(*config.BlockSize)
+	connData.s.BlocksIn = make(chan ripper.RawBlock, 100)
+	connData.s.BlocksOut = make(chan ripper.SplitBlock, 100)
+
+	go connData.s.RunSplitter()
+
+	for i := 0; i < *config.Threads; i++ {
+		startClientThread(config, connData)
 	}
 
-	
+	connData.s.AddIn(os.Stdin)
+
+	connData.s.WaitIn.Wait()
+	connData.s.WaitOut.Wait()
+	log.Fatal("Done!")
 }
 
 func main() {
