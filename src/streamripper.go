@@ -87,6 +87,8 @@ func handleServerConnection(conn net.Conn, config RipperConfig) {
 		connData.j.AddIn(conn)
 		connData.j.WaitIn.Wait()
 		connData.closeOnce.Do(func() {
+			// We could have the server allow the clients to reconnect I suppose. 
+			// That is why we manually tell the joiner that we are done with the clients.
 			close(connData.j.BlocksOut)
 		})
 		log.Printf("Connection from %v closed.", conn.RemoteAddr())
